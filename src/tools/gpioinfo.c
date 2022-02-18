@@ -21,6 +21,21 @@ struct flag {
 	is_set_func is_set;
 };
 
+static bool line_bias_is_pullup(struct gpiod_line *line)
+{
+	return gpiod_line_bias(line) == GPIOD_LINE_BIAS_PULL_UP;
+}
+
+static bool line_bias_is_pulldown(struct gpiod_line *line)
+{
+	return gpiod_line_bias(line) == GPIOD_LINE_BIAS_PULL_DOWN;
+}
+
+static bool line_bias_is_disabled(struct gpiod_line *line)
+{
+	return gpiod_line_bias(line) == GPIOD_LINE_BIAS_DISABLE;
+}
+
 static const struct flag flags[] = {
 	{
 		.name = "used",
@@ -33,6 +48,18 @@ static const struct flag flags[] = {
 	{
 		.name = "open-source",
 		.is_set = gpiod_line_is_open_source,
+	},
+	{
+		.name = "pull-up",
+		.is_set = line_bias_is_pullup,
+	},
+	{
+		.name = "pull-down",
+		.is_set = line_bias_is_pulldown,
+	},
+	{
+		.name = "bias-disabled",
+		.is_set = line_bias_is_disabled,
 	},
 };
 
@@ -47,6 +74,7 @@ static const char *const shortopts = "+hv";
 static void print_help(void)
 {
 	printf("Usage: %s [OPTIONS] <gpiochip1> ...\n", get_progname());
+	printf("\n");
 	printf("Print information about all lines of the specified GPIO chip(s) (or all gpiochips if none are specified).\n");
 	printf("\n");
 	printf("Options:\n");
@@ -119,8 +147,12 @@ static void list_lines(struct gpiod_chip *chip)
 		     : prinfo(&of, 12, "unnamed");
 		printf(" ");
 
-		consumer ? prinfo(&of, 12, "\"%s\"", consumer)
-			 : prinfo(&of, 12, "unused");
+		if (!gpiod_line_is_used(line))
+			prinfo(&of, 12, "unused");
+		else
+			consumer ? prinfo(&of, 12, "\"%s\"", consumer)
+				 : prinfo(&of, 12, "kernel");
+
 		printf(" ");
 
 		prinfo(&of, 8, "%s ", direction == GPIOD_LINE_DIRECTION_INPUT

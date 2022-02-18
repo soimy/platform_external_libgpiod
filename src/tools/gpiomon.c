@@ -10,10 +10,8 @@
 #include <gpiod.h>
 #include <limits.h>
 #include <poll.h>
-#include <signal.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/signalfd.h>
 #include <unistd.h>
 
 #include "tools-common.h"
@@ -22,6 +20,7 @@ static const struct option longopts[] = {
 	{ "help",		no_argument,		NULL,	'h' },
 	{ "version",		no_argument,		NULL,	'v' },
 	{ "active-low",		no_argument,		NULL,	'l' },
+	{ "bias",		required_argument,	NULL,	'B' },
 	{ "num-events",		required_argument,	NULL,	'n' },
 	{ "silent",		no_argument,		NULL,	's' },
 	{ "rising-edge",	no_argument,		NULL,	'r' },
@@ -31,24 +30,29 @@ static const struct option longopts[] = {
 	{ GETOPT_NULL_LONGOPT },
 };
 
-static const char *const shortopts = "+hvln:srfbF:";
+static const char *const shortopts = "+hvlB:n:srfbF:";
 
 static void print_help(void)
 {
 	printf("Usage: %s [OPTIONS] <chip name/number> <offset 1> <offset 2> ...\n",
 	       get_progname());
+	printf("\n");
 	printf("Wait for events on GPIO lines and print them to standard output\n");
 	printf("\n");
 	printf("Options:\n");
 	printf("  -h, --help:\t\tdisplay this message and exit\n");
 	printf("  -v, --version:\tdisplay the version and exit\n");
 	printf("  -l, --active-low:\tset the line active state to low\n");
+	printf("  -B, --bias=[as-is|disable|pull-down|pull-up] (defaults to 'as-is'):\n");
+	printf("		set the line bias\n");
 	printf("  -n, --num-events=NUM:\texit after processing NUM events\n");
 	printf("  -s, --silent:\t\tdon't print event info\n");
 	printf("  -r, --rising-edge:\tonly process rising edge events\n");
 	printf("  -f, --falling-edge:\tonly process falling edge events\n");
 	printf("  -b, --line-buffered:\tset standard output as line buffered\n");
 	printf("  -F, --format=FMT\tspecify custom output format\n");
+	printf("\n");
+	print_bias_help();
 	printf("\n");
 	printf("Format specifiers:\n");
 	printf("  %%o:  GPIO line offset\n");
@@ -220,30 +224,11 @@ static int event_callback(int event_type, unsigned int line_offset,
 	return GPIOD_CTXLESS_EVENT_CB_RET_OK;
 }
 
-static int make_signalfd(void)
-{
-	sigset_t sigmask;
-	int sigfd, rv;
-
-	sigemptyset(&sigmask);
-	sigaddset(&sigmask, SIGTERM);
-	sigaddset(&sigmask, SIGINT);
-
-	rv = sigprocmask(SIG_BLOCK, &sigmask, NULL);
-	if (rv < 0)
-		die("error masking signals: %s", strerror(errno));
-
-	sigfd = signalfd(-1, &sigmask, 0);
-	if (sigfd < 0)
-		die("error creating signalfd: %s", strerror(errno));
-
-	return sigfd;
-}
-
 int main(int argc, char **argv)
 {
 	unsigned int offsets[GPIOD_LINE_BULK_MAX_LINES], num_lines = 0, offset;
 	bool active_low = false, watch_rising = false, watch_falling = false;
+	int flags = 0;
 	struct timespec timeout = { 10, 0 };
 	int optc, opti, rv, i, event_type;
 	struct mon_ctx ctx;
@@ -265,6 +250,9 @@ int main(int argc, char **argv)
 			return EXIT_SUCCESS;
 		case 'l':
 			active_low = true;
+			break;
+		case 'B':
+			flags = bias_flags(optarg);
 			break;
 		case 'n':
 			ctx.events_wanted = strtoul(optarg, &end, 10);
@@ -320,11 +308,11 @@ int main(int argc, char **argv)
 
 	ctx.sigfd = make_signalfd();
 
-	rv = gpiod_ctxless_event_monitor_multiple(argv[0], event_type,
-						  offsets, num_lines,
-						  active_low, "gpiomon",
-						  &timeout, poll_callback,
-						  event_callback, &ctx);
+	rv = gpiod_ctxless_event_monitor_multiple_ext(
+				argv[0], event_type, offsets,
+				num_lines, active_low, "gpiomon",
+				&timeout, poll_callback,
+				event_callback, &ctx, flags);
 	if (rv)
 		die_perror("error waiting for events");
 
