@@ -28,6 +28,7 @@ cc_library {
 
 cc_binary {
     name: "gpiodetect",
+    vendor: true,
     srcs: ["src/tools/gpiodetect.c","src/tools/tools-common.c"],
     shared_libs: ["libgpiod"],
     cflags: ["-Werror"],
@@ -35,6 +36,7 @@ cc_binary {
 
 cc_binary {
     name: "gpiofind",
+    vendor: true,
     srcs: ["src/tools/gpiofind.c","src/tools/tools-common.c"],
     shared_libs: ["libgpiod"],
     cflags: ["-Werror"],
@@ -42,6 +44,7 @@ cc_binary {
 
 cc_binary {
     name: "gpioget",
+    vendor: true,
     srcs: ["src/tools/gpioget.c","src/tools/tools-common.c"],
     shared_libs: ["libgpiod"],
     cflags: ["-Werror", "-Wall"],
@@ -49,6 +52,7 @@ cc_binary {
 
 cc_binary {
     name: "gpioinfo",
+    vendor: true,
     srcs: ["src/tools/gpioinfo.c","src/tools/tools-common.c"],
     shared_libs: ["libgpiod"],
     cflags: ["-Werror"],
@@ -56,6 +60,7 @@ cc_binary {
 
 cc_binary {
     name: "gpiomon",
+    vendor: true,
     srcs: ["src/tools/gpiomon.c","src/tools/tools-common.c"],
     shared_libs: ["libgpiod"],
     cflags: ["-Werror"],
@@ -63,6 +68,7 @@ cc_binary {
 
 cc_binary {
     name: "gpioset",
+    vendor: true,
     srcs: ["src/tools/gpioset.c","src/tools/tools-common.c"],
     shared_libs: ["libgpiod"],
     cflags: ["-Werror"],
