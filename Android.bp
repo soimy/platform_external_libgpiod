@@ -48,6 +48,13 @@ cc_binary {
 }
 
 cc_binary {
+    name: "gpiotest",
+    srcs: ["src/tools/gpiotest.c"],
+    shared_libs: ["libgpiod"],
+    cflags: ["-Werror", "-Wall"],
+}
+
+cc_binary {
     name: "gpioinfo",
     srcs: ["src/tools/gpioinfo.c","src/tools/tools-common.c"],
     shared_libs: ["libgpiod"],
